@@ -16,6 +16,7 @@ class Monitor(object):
 
     def logs_uri(self,
             route):
+        route = route.lstrip("/")
         return "http://{}:{}/{}".format(
             self.config["EMIS_LOG_HOST"],
             self.config["EMIS_LOG_PORT"],
@@ -68,7 +69,7 @@ class Monitor(object):
             sys.stderr.write("Error while sending log message to broker\n")
             sys.stderr.write("Log message: {}\n".format(message))
             sys.stderr.write("Error message: {}\n".format(str(exception)))
-            sys.stderr.write("{}\n".format(traceback.format_exc(exception)));
+            sys.stderr.write("{}\n".format(traceback.format_exc()))
             sys.stderr.flush()
 
 
@@ -97,7 +98,7 @@ class Monitor(object):
 
         except Exception as exception:
 
-            sys.stderr.write("{}\n".format(traceback.format_exc(exception)));
+            sys.stderr.write("{}\n".format(traceback.format_exc()))
             sys.stderr.flush()
 
 
