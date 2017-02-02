@@ -5,13 +5,25 @@ import traceback
 from flask import Config
 import pika
 from .configuration import configuration
-# from .check import filesystem
+from .monitor import clear_expired_resource
 
 
 class Monitor(object):
 
     def __init__(self):
         self.config = Config(__name__)
+
+
+    def aggregate_query_uri(self):
+        return "http://{}:{}".format(
+            self.config["EMIS_AGGREGATE_QUERY_HOST"],
+            self.config["EMIS_AGGREGATE_QUERY_PORT"])
+
+
+    def domain_uri(self):
+        return "http://{}:{}".format(
+            self.config["EMIS_DOMAIN_HOST"],
+            self.config["EMIS_DOMAIN_PORT"])
 
 
     def logs_uri(self,
@@ -39,17 +51,15 @@ class Monitor(object):
 
             # Post message in rabbitmq and be done with it.
             credentials = pika.PlainCredentials(
-                current_app.config["EMIS_RABBITMQ_DEFAULT_USER"],
-                current_app.config["EMIS_RABBITMQ_DEFAULT_PASS"]
+                self.config["EMIS_RABBITMQ_DEFAULT_USER"],
+                self.config["EMIS_RABBITMQ_DEFAULT_PASS"]
             )
 
-            connection = pika.BlockingConnection(
-                pika.ConnectionParameters(
-                    host="rabbitmq",
-                    virtual_host=current_app.config[
-                        "EMIS_RABBITMQ_DEFAULT_VHOST"],
-                    credentials=credentials)
-            )
+            connection = pika.BlockingConnection(pika.ConnectionParameters(
+                host="rabbitmq",
+                virtual_host=self.config["EMIS_RABBITMQ_DEFAULT_VHOST"],
+                credentials=credentials
+            ))
             channel = connection.channel()
 
             properties = pika.BasicProperties()
@@ -73,28 +83,26 @@ class Monitor(object):
             sys.stderr.flush()
 
 
-    def on_message(self,
+    def on_clear_expired_resource(self,
             channel,
             method_frame,
             header_frame,
             body):
+
         sys.stdout.write("received message: {}\n".format(body))
         sys.stdout.flush()
 
         try:
+
             body = body.decode("utf-8")
 
-            self.log(body)
+            self.log("clear expired resource: {}".format(body))
 
             data = json.loads(body)
+            expiration_period = data["expiration_period"]
 
-            # uri = self.properties_uri("properties")
-            # pathnames = data["pathnames"]
-            # rewrite = data["rewrite"].split(":") if "rewrite" in data else None
-            # assert rewrite is None or len(rewrite) == 2, rewrite
-
-            # scan(uri, pathnames, rewrite)
-            # filesystem.scan()
+            clear_expired_resource(self.aggregate_query_uri(),
+                self.domain_uri(), expiration_period)
 
         except Exception as exception:
 
@@ -121,11 +129,14 @@ class Monitor(object):
             retry_delay=5  # Seconds
         ))
         self.channel = self.connection.channel()
+        self.channel.basic_qos(prefetch_count=1)
+
         self.channel.queue_declare(
-            queue="monitor")
+            queue="clear_expired_resource",
+            durable=False)
         self.channel.basic_consume(
-            self.on_message,
-            queue="monitor")
+            self.on_clear_expired_resource,
+            queue="clear_expired_resource")
 
         try:
             sys.stdout.write("Start consuming...\n")

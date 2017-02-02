@@ -1,1 +1,3 @@
+python-dateutil==2.6.0
 psutil==5.0.1
+starling==0.0.4
