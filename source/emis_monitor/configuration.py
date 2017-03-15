@@ -12,7 +12,7 @@ class Configuration:
 
     EMIS_AGGREGATE_QUERY_HOST = "emis_aggregate_query"
     EMIS_DOMAIN_HOST = "emis_domain"
-    EMIS_LOG_HOST = "log"
+    EMIS_LOG_HOST = "emis_log"
 
 
     @staticmethod
@@ -28,7 +28,7 @@ class DevelopmentConfiguration(Configuration):
     EMIS_LOG_PORT = 5000
 
 
-class TestingConfiguration(Configuration):
+class TestConfiguration(Configuration):
 
     EMIS_AGGREGATE_QUERY_PORT = 5000
     EMIS_DOMAIN_PORT = 5000
@@ -44,6 +44,7 @@ class ProductionConfiguration(Configuration):
 
 configuration = {
     "development": DevelopmentConfiguration,
-    "testing": TestingConfiguration,
+    "test": TestConfiguration,
+    "acceptance": ProductionConfiguration,
     "production": ProductionConfiguration
 }
